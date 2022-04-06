@@ -9,28 +9,44 @@ import XCTest
 @testable import Capture_Memory_Leak_with_XCTest
 
 class Capture_Memory_Leak_with_XCTestTests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    
+    /// holds refereces of instance of each type
+    /// On deallocation of `viewModel.department` these types will be nil'ed out.
+    private weak var weakDepartment: Department?
+    private weak var weakEmployee: Employee?
+    
+    override func tearDown() {
+        super.tearDown()
+        assertMemoryLeakOnEmployee()
+        assertMemoryLeakOnDepartment()
     }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    
+    private func assertMemoryLeakOnEmployee() {
+        /// Once `employee` instance is dealloacted then `weakEmployee` will also gets dealloacted &  below test will success
+        XCTAssertNil(weakEmployee, "Employee Object is leaking")
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    
+    private func assertMemoryLeakOnDepartment() {
+        /// Once `department` instance is dealloacted then `weakDepartment` will also gets dealloacted & below test will success
+        XCTAssertNil(weakDepartment, "Department Object is leaking")
     }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    
+    func test_employeeExistsInDepartment() {
+        let iOSDepartment = Department(1, name: "iOS")
+        let abc = Employee(1, name: "ABC", department: iOSDepartment)
+        
+        let viewModel = DepartmentViewModel(iOSDepartment)
+        viewModel.add(abc)
+        
+        // Entire memory leak magic happens here.
+        // By end of this function, If proper object deallocation happens, it is expected that below instance(s) will be nil'lyfied
+        weakEmployee = abc
+        weakDepartment = iOSDepartment
+        
+        let employeeExist = iOSDepartment.employees.contains {
+            abc.id == $0.id
         }
+        
+        XCTAssertTrue(employeeExist)
     }
-
 }
